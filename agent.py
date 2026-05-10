@@ -438,15 +438,20 @@ def run_agent(messages: list[Message]) -> ChatResponse:
     if intent == "CLARIFY" and (facts.get("role") or facts.get("skills") or facts.get("test_types")):
         intent = "RECOMMEND"
 
-    # Force RECOMMEND if last user message is specific enough (>=2 words, not just "help" etc.)
+    # Force RECOMMEND if CLARIFY but message contains job/role indicators
+    _JOB_KEYWORDS = {
+        "developer", "engineer", "manager", "analyst", "scientist", "representative",
+        "director", "executive", "designer", "consultant", "specialist", "coordinator",
+        "java", "python", "sales", "marketing", "finance", "hr", "customer service",
+        "graduate", "senior", "junior", "entry", "mid-level", "leadership", "cxo",
+        "trainee", "intern", "architect", "devops", "data", "software", "technical",
+    }
     if intent == "CLARIFY" and turns_used == 1:
         last_user = next((m["content"] for m in reversed(msg_dicts) if m["role"] == "user"), "")
-        _vague = {"assessment", "help", "something", "test", "tests", "assessments", "need", "i need"}
-        words = set(last_user.lower().split())
-        if len(last_user.split()) >= 2 and not words.issubset(_vague):
+        if any(kw in last_user.lower() for kw in _JOB_KEYWORDS):
             intent = "RECOMMEND"
             if not facts.get("role"):
-                facts["role"] = last_user  # use raw message as query seed
+                facts["role"] = last_user
 
     # Force RECOMMEND after turn 6 regardless
     if intent == "CLARIFY" and turns_used >= 6:
