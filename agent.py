@@ -233,13 +233,13 @@ def handle_recommend(facts: dict, messages: list[dict], prior_names: list[str] |
     items = parse_recommendation_list(raw)
     recommendations = validate_and_filter(items)
 
-    # Retry with broader query if nothing survived validation
+    # Retry: LLM hallucinated — fall back directly to top retrieval results (no LLM)
     if len(recommendations) == 0:
-        logger.warning("All items dropped in validation; retrying with broader query.")
-        broader = hybrid_search(facts.get("role") or "assessment", top_k=20)
-        items = parse_recommendation_list({"recommendations": broader[:5]})
+        logger.warning("All items dropped in validation; falling back to top retrieval results.")
+        fallback_query = query if query and query != "assessment" else (facts.get("role") or "assessment")
+        broader = hybrid_search(fallback_query, top_k=10)
         recommendations = validate_and_filter(
-            [{"name": r["name"], "url": r["url"], "test_type": r["test_type"]} for r in broader[:5]]
+            [{"name": r["name"], "url": r["url"], "test_type": r["test_type"]} for r in broader]
         )
 
     reply_messages = [
