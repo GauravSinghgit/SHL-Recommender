@@ -1,0 +1,50 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Test cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data artifacts — rebuild locally with ingest.py
+# NOTE: catalog.json IS committed (needed by server)
+# faiss.index and bm25_corpus.pkl are large binaries — excluded
+data/faiss.index
+data/bm25_corpus.pkl
+data/shl_product_catalog.json
+data/shl_product_catalog_clean.json
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log
+logs/
+
+# Build / dist
+dist/
+build/
+*.egg-info/
