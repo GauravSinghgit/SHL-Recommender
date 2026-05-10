@@ -204,6 +204,10 @@ def handle_clarify(facts: dict, missing: list[str], messages: list[dict]) -> Cha
 
 def handle_recommend(facts: dict, messages: list[dict], prior_names: list[str] | None = None) -> ChatResponse:
     query = facts_to_query(facts)
+    if not query or query == "assessment":
+        last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        if last_user:
+            query = last_user
     candidates = hybrid_search(query, top_k=20)
 
     catalog_block = candidates_to_block(candidates)
@@ -433,6 +437,16 @@ def run_agent(messages: list[Message]) -> ChatResponse:
     # Force RECOMMEND if role/skill/test_type was extracted — no need to clarify
     if intent == "CLARIFY" and (facts.get("role") or facts.get("skills") or facts.get("test_types")):
         intent = "RECOMMEND"
+
+    # Force RECOMMEND if last user message is specific enough (>=2 words, not just "help" etc.)
+    if intent == "CLARIFY" and turns_used == 1:
+        last_user = next((m["content"] for m in reversed(msg_dicts) if m["role"] == "user"), "")
+        _vague = {"assessment", "help", "something", "test", "tests", "assessments", "need", "i need"}
+        words = set(last_user.lower().split())
+        if len(last_user.split()) >= 2 and not words.issubset(_vague):
+            intent = "RECOMMEND"
+            if not facts.get("role"):
+                facts["role"] = last_user  # use raw message as query seed
 
     # Force RECOMMEND after turn 6 regardless
     if intent == "CLARIFY" and turns_used >= 6:
