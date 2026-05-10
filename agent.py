@@ -375,7 +375,7 @@ def handle_compare(messages: list[dict]) -> ChatResponse:
         },
     ]
     reply = clean_reply(call_llm(compare_messages, timeout=20) or "")
-    if not reply or len(reply) < 30:
+    if not reply or len(reply) < 60:
         # Build a simple structured comparison as fallback
         lines = []
         for rec in records:
@@ -465,6 +465,13 @@ def run_agent(messages: list[Message]) -> ChatResponse:
     # Force RECOMMEND after turn 6 regardless
     if intent == "CLARIFY" and turns_used >= 6:
         intent = "RECOMMEND"
+
+    # COMPARE only makes sense when named assessments exist in conversation;
+    # "comparing candidates" mid-conversation = RECOMMEND/REFINE, not COMPARE
+    if intent == "COMPARE":
+        prior_recs = _extract_last_recommendations(msg_dicts)
+        if not prior_recs:
+            intent = "RECOMMEND" if turns_used <= 2 else "REFINE"
 
     logger.info("Intent=%s turns=%d role=%s level=%s", intent, turns_used, facts.get("role"), facts.get("level"))
 
