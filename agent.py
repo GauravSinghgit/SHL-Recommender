@@ -374,7 +374,17 @@ def handle_compare(messages: list[dict]) -> ChatResponse:
             ),
         },
     ]
-    reply = clean_reply(call_llm(compare_messages, timeout=20) or "Here is a comparison of the requested assessments.")
+    reply = clean_reply(call_llm(compare_messages, timeout=20) or "")
+    if not reply or len(reply) < 30:
+        # Build a simple structured comparison as fallback
+        lines = []
+        for rec in records:
+            lines.append(
+                f"{rec['name']}: type={rec.get('test_type','')}, "
+                f"duration={rec.get('duration_minutes','?')} min, "
+                f"levels={', '.join(rec.get('job_levels', [])[:3])}."
+            )
+        reply = "Here is a comparison of the requested assessments:\n" + "\n".join(lines)
 
     return ChatResponse(reply=reply, recommendations=[], end_of_conversation=False)
 
@@ -438,13 +448,12 @@ def run_agent(messages: list[Message]) -> ChatResponse:
     if intent == "CLARIFY" and (facts.get("role") or facts.get("skills") or facts.get("test_types")):
         intent = "RECOMMEND"
 
-    # Force RECOMMEND if CLARIFY but message contains job/role indicators
+    # Force RECOMMEND if CLARIFY but message contains unambiguous job-role indicators
     _JOB_KEYWORDS = {
         "developer", "engineer", "manager", "analyst", "scientist", "representative",
         "director", "executive", "designer", "consultant", "specialist", "coordinator",
-        "java", "python", "sales", "marketing", "finance", "hr", "customer service",
-        "graduate", "senior", "junior", "entry", "mid-level", "leadership", "cxo",
-        "trainee", "intern", "architect", "devops", "data", "software", "technical",
+        "java", "sales", "marketing", "finance", "trainee", "intern", "architect",
+        "devops", "software", "cxo", "graduate", "mid-level",
     }
     if intent == "CLARIFY" and turns_used == 1:
         last_user = next((m["content"] for m in reversed(msg_dicts) if m["role"] == "user"), "")
